@@ -1,17 +1,20 @@
-Package: scAB
+Package: LargescAB
 Type: Package
-Title: R package for integrating single-cell and bulk RNA-seq data with
-        phenotype information.
-Version: 1.0.0
+Title: Large-scale extension of scAB for integrating single-cell and bulk
+        RNA-seq data with phenotype information.
+Version: 0.1.0
 Author: Qinran Zhang
 Maintainer: Qinran Zhang<qr_zhang@whu.edu.cn>
-Description: R toolkit for integrating single-cell and bulk RNA-seq data with phenotype information.
+Description: Local development fork of scAB focused on scalable preprocessing,
+    HDF5-backed fitting, large-data K and alpha selection, and reproducible
+    project-level execution for large single-cell datasets.
 Depends: R (>= 3.5.0)
 biocViews:
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-Imports: Seurat, preprocessCore, MASS, diptest, multimode, survival
+Imports: Seurat, SeuratObject, Matrix, preprocessCore, rhdf5, MASS,
+        diptest, multimode, survival
 RoxygenNote: 7.1.2
 NeedsCompilation: no
 Packaged: 2022-04-18 01:11:46 UTC; MSI-NB

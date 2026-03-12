@@ -109,30 +109,35 @@ setClass("scAB_data",slots=list(X="matrix",
 create_scAB <- function(Obejct,bulk_dataset,phenotype,method=c("survival","binary")){
   # cell neighbors
   method=match.arg(method)
-  if(is.null(Obejct@ graphs$ RNA_snn)) print("'RNA_snn' is not found, please run FindNeighbors function in Seurat.")
-  A <- as.matrix(Obejct@ graphs$ RNA_snn)
+  A <- get_scab_graph(Obejct = Obejct, graph_name = "RNA_snn")
   diag(A) <- 0
   A[which(A != 0)] <- 1
-  D <- diag(rowSums(A))
-  D12 <- diag(1/sqrt(rowSums(A)))
+  deg <- rowSums(A)
+  D <- diag(deg)
+  D12 <- diag(ifelse(deg > 0, 1 / sqrt(deg), 0))
   L <- D12%*%(D-A)%*%D12
   Dhat <- D12%*%(D)%*%D12
   Ahat <- D12%*%(A)%*%D12
   
   # similarity matrix
-  sc_exprs <- as.data.frame(Obejct@ assays$ RNA@data)
+  bulk_dataset <- as.matrix(bulk_dataset)
+  sc_exprs <- as.matrix(get_scab_assay_layer(Obejct = Obejct, assay = "RNA", layer = "data"))
   common <- intersect(rownames(bulk_dataset), rownames(sc_exprs))
-  dataset0 <- cbind(bulk_dataset[common,], sc_exprs[common,])         # Dataset before quantile normalization.
+  if(length(common) == 0) stop("No overlapping genes were found between bulk_dataset and single-cell RNA data.")
+  dataset0 <- cbind(bulk_dataset[common,,drop=FALSE], sc_exprs[common,,drop=FALSE])         # Dataset before quantile normalization.
   dataset1 <- preprocessCore::normalize.quantiles(as.matrix(dataset0))                           # Dataset after  quantile normalization.
   rownames(dataset1) <- rownames(dataset0)
   colnames(dataset1) <- colnames(dataset0)
-  Expression_bulk <- dataset1[,1:ncol(bulk_dataset)]
-  Expression_cell <- dataset1[,(ncol(bulk_dataset) + 1):ncol(dataset1)]
+  Expression_bulk <- dataset1[,1:ncol(bulk_dataset),drop=FALSE]
+  Expression_cell <- dataset1[,(ncol(bulk_dataset) + 1):ncol(dataset1),drop=FALSE]
   X <- cor(Expression_bulk, Expression_cell)
+  X[is.na(X)] <- 0
   X=X/norm(X,"F")
   
   # phenotype ranking
   if(method=="survival"){
+    phenotype <- as.data.frame(phenotype)
+    if(is.null(rownames(phenotype))) stop("For method='survival', phenotype must have row names matching bulk samples.")
     ss <- guanrank(phenotype[,c("time","status")])
     S <- diag(1-ss[rownames(phenotype),3])
   }
