@@ -2,7 +2,7 @@ Package: LargescAB
 Type: Package
 Title: Large-scale extension of scAB for integrating single-cell and bulk
         RNA-seq data with phenotype information.
-Version: 0.1.0
+Version: 1.0.0
 Author: Qinran Zhang
 Maintainer: Qinran Zhang<qr_zhang@whu.edu.cn>
 Description: Local development fork of scAB focused on scalable preprocessing,
