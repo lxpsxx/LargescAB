@@ -1,37 +1,52 @@
 # LargescAB
 
-LargescAB is a large-scale engineering extension of `scAB`.  
-It is designed to preserve the core scAB modeling workflow while improving
-compatibility and scalability for modern single-cell datasets.
+LargescAB is a scalable fork of `scAB` for integrating single-cell and bulk
+RNA-seq data with phenotype information.
 
-## What LargescAB Adds
+It preserves the core scAB modeling workflow while adding engineering
+improvements required for large single-cell datasets, including Seurat v5
+compatibility and memory-aware large-matrix handling.
+
+## Key Capabilities
 
 - Seurat v5 / Assay5 compatibility
-- Sparse graph handling
-- HDF5-backed `X` support
-- Blockwise quantile normalization
-- Blockwise / streaming fitting
-- Large-data `select_K_large()`
-- Large-data `select_alpha_large()`
-- Unified thread/process control
+- Sparse graph support for cell-cell regularization
+- HDF5-backed `X` matrix support
+- Blockwise preprocessing and fitting paths
+- Large-data `K` selection (`select_K_large()`)
+- Large-data alpha selection (`select_alpha_large()`)
+- Explicit thread/process parallel controls
 
-## Recommended API
+## Installation
 
-Use this four-step workflow for large datasets:
+```r
+# install.packages("devtools")
+devtools::install_github("lxpsxx/LargescAB")
+```
+
+Core dependencies are listed in `DESCRIPTION`.
+
+## Main API
+
+Large-data production workflow:
 
 1. `create_scAB_large()`
-2. `select_K_large()` (optional if `K` is fixed)
-3. `select_alpha_large()` (optional if `alpha`/`alpha_2` are fixed)
+2. `select_K_large()` (optional)
+3. `select_alpha_large()` (optional)
 4. `scAB_large()`
 
-The original dense interfaces are still available for compatibility:
+Original dense interfaces are retained for compatibility:
+`create_scAB()`, `scAB()`, `select_K()`, and `select_alpha()`.
 
-- `create_scAB()`
-- `scAB()`
-- `select_K()`
-- `select_alpha()`
+## Input Requirements
 
-## Typical Usage
+- `sc_use`: Seurat object with an expression `data` layer and graph
+  (default graph name: `RNA_snn`)
+- `bulk_use`: numeric matrix in `gene x sample` format
+- `Y_cox`: phenotype table aligned to `colnames(bulk_use)`
+  - survival mode: columns `time` and `status`
+
+## Quick Start
 
 ```r
 obj <- create_scAB_large(
@@ -40,10 +55,9 @@ obj <- create_scAB_large(
   phenotype = Y_cox,
   method = "survival",
   block_size = 5000L,
-  num_threads = 8L,
-  x_parallel = FALSE,
   x_backend = "hdf5",
-  x_h5_path = "scab_X.h5"
+  x_h5_path = "scab_X.h5",
+  num_threads = 8L
 )
 
 k_info <- select_K_large(
@@ -73,57 +87,21 @@ fit <- scAB_large(
   alpha = alpha_info$alpha_1,
   alpha_2 = alpha_info$alpha_2,
   maxiter = 2000,
-  seed = 7L,
   materialize_hdf5 = FALSE,
   num_threads = 48L
 )
 ```
 
-## Practical Parameter Tiers
+For a concise parameter guide, see [`PARAMETERS.md`](./PARAMETERS.md).
 
-Frequently tuned:
+## Reproducibility and Parallel Notes
 
-- `K`
-- `alpha`
-- `alpha_2`
-- `block_size`
-- `num_threads`
-- `x_parallel` / `x_nworkers`
-- `k_parallel` / `k_nworkers`
-- `cv_parallel` / `cv_nworkers`
-- `materialize_hdf5`
+- Use `seed` for controlled initialization/reproducibility.
+- `num_threads` controls single-process BLAS/OMP threads.
+- `x_parallel`, `k_parallel`, and `cv_parallel` are task-level parallel modes.
+- Worker-level `num_threads` is forced to `1` when task-level parallelism is enabled.
 
-Usually left as default:
+## License and Attribution
 
-- `assay = "RNA"`
-- `graph_name = "RNA_snn"`
-- `binarize_graph = TRUE`
-- `convergence_threshold = 1e-5`
-- `check_every = 1`
-
-Debug or rescue only:
-
-- `verify_equivalence`
-- `eps`
-- `guard_nonfinite`
-
-Detailed parameter notes: [`PARAMETERS.md`](./PARAMETERS.md)
-
-## Parallel Rules
-
-- `num_threads` controls only single-process BLAS/OMP.
-- `x_parallel` controls only preprocessing `X` block construction.
-- `k_parallel` controls only repeated fits in `select_K_large()`.
-- `cv_parallel` controls only CV task parallelism in `select_alpha_large()`.
-- When task-level multiprocessing is enabled, worker-level `num_threads` is forced to `1`.
-- Nested parallelism is intentionally disallowed in the first stable version.
-
-## Relationship to Original scAB
-
-LargescAB aims to preserve the core scAB methodology on valid inputs while
-fixing compatibility and stability issues where needed (for example Seurat v5
-access, missing graph safeguards, and zero-degree graph edge cases).
-
-## Suggested GitHub Description
-
-`LargescAB is a scalable implementation of scAB for large single-cell transcriptomic datasets. It is compatible with Seurat v5, reduces dense-memory bottlenecks, and is designed for datasets with large numbers of cells, including datasets with more than 100,000 cells. Its computational workflow preserves the core scAB methodology while introducing engineering changes for scalability and reproducibility.`
+LargescAB is distributed under `GPL-3` and is based on the original `scAB`
+package. Please keep attribution and license terms when redistributing.
